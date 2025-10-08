@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { AppContextProvider, useAppContext } from './context/AppContext.tsx';
 import Header from './components/Header.tsx';
