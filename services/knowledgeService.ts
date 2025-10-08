@@ -1,10 +1,9 @@
 
 
-import { KnowledgeAnswer, QuestionHistory, Bookmark } from '../types';
-// FIX: Use the correct `GoogleGenAI` class as per guidelines.
+import { KnowledgeAnswer, QuestionHistory, Bookmark } from '../types.ts';
 import { GoogleGenAI, Type } from '@google/genai';
-import { Language } from '../lib/translations';
-import { supabase } from '../lib/supabaseClient';
+import { Language } from '../lib/translations.ts';
+import { supabase } from '../lib/supabaseClient.ts';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -15,7 +14,6 @@ export const getKnowledgeAnswer = async (query: string, lang: Language): Promise
         console.warn("Gemini API key not found. Falling back to mock knowledge answer.");
         return getMockKnowledgeAnswer(query);
     }
-    // FIX: Use the correct `GoogleGenAI` class as per guidelines.
     const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     const langInstruction = lang === 'te' ? 'You MUST respond only in the Telugu language.' : 'Please provide the answer in English.';
@@ -45,7 +43,6 @@ export const getKnowledgeAnswer = async (query: string, lang: Language): Promise
 
     try {
         const response = await ai.models.generateContent({
-            // FIX: Use the correct model name as per guidelines.
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {

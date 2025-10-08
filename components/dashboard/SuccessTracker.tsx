@@ -1,12 +1,12 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppContext } from '../../context/AppContext';
-import { getOutcomes, addOutcome } from '../../services/trackerService';
-// FIX: Corrected import path.
-import { addActionToQueue } from '../../services/offlineService';
-import { Outcome } from '../../types';
-import SkeletonLoader from '../SkeletonLoader';
-import { PendingIcon } from '../Icons';
+import { useAppContext } from '../../context/AppContext.tsx';
+import { getOutcomes, addOutcome } from '../../services/trackerService.ts';
+import { addActionToQueue } from '../../services/offlineService.ts';
+import { Outcome } from '../../types.ts';
+import SkeletonLoader from '../SkeletonLoader.tsx';
+import { PendingIcon } from '../Icons.tsx';
 
 const SuccessTracker = () => {
     const { t, user, isOnline, refreshData, refreshPendingCount } = useAppContext();
