@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import AIDiagnosis from '../components/dashboard/AIDiagnosis.tsx';
@@ -33,15 +32,24 @@ const EmployeeDashboard = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'ai_diagnosis': return <AIDiagnosis />;
-            case 'weather_alerts': return <WeatherAlerts />;
-            case 'advisory_calendar': return <AdvisoryCalendar />;
-            case 'knowledge_base': return <KnowledgeBase />;
-            case 'success_tracker': return <SuccessTracker />;
-            case 'suppliers_directory': return <SuppliersDirectory />;
-            case 'video_tutorials': return <VideoTutorials />;
-            case 'community_feed': return <CommunityFeed />;
-            default: return <AIDiagnosis />;
+            case 'ai_diagnosis':
+                return <AIDiagnosis />;
+            case 'weather_alerts':
+                return <WeatherAlerts />;
+            case 'advisory_calendar':
+                return <AdvisoryCalendar />;
+            case 'knowledge_base':
+                return <KnowledgeBase />;
+            case 'success_tracker':
+                return <SuccessTracker />;
+            case 'suppliers_directory':
+                return <SuppliersDirectory />;
+            case 'video_tutorials':
+                return <VideoTutorials />;
+            case 'community_feed':
+                return <CommunityFeed />;
+            default:
+                return null;
         }
     };
     

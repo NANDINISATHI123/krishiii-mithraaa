@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext.tsx';
 import { getReports } from '../../services/reportService.ts';
 import { Report } from '../../types.ts';
 import SkeletonLoader from '../SkeletonLoader.tsx';
+import { CloseIcon } from '../Icons.tsx';
 
 const AiDiagnosisReports = () => {
     const { t } = useAppContext();
@@ -62,8 +63,8 @@ const AiDiagnosisReports = () => {
 const ReportDetailModal = ({ report, onClose, t }: { report: Report, onClose: () => void, t: any }) => (
     <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
-            <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
-                &times;
+            <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 p-1">
+                <CloseIcon className="w-6 h-6" />
             </button>
             <h2 className="text-2xl font-bold text-primary dark:text-primary-light mb-4">{t('diagnosis_result')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect } from 'react';
 import { AppContextProvider, useAppContext } from './context/AppContext.tsx';
 import Header from './components/Header.tsx';
@@ -13,29 +10,9 @@ import AdminDashboard from './pages/AdminDashboard.tsx';
 import EmployeeDashboard from './pages/EmployeeDashboard.tsx';
 import { CheckCircleIcon, CloseIcon, LogoIcon } from './components/Icons.tsx';
 
-const Router = () => {
+const Router = ({ hash }: { hash: string }) => {
     const { profile, user, profileLoading } = useAppContext();
-    const [hash, setHash] = useState('');
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        // This effect runs only on the client, after the initial render
-        setHash(window.location.hash);
-        setIsClient(true);
-
-        const handleHashChange = () => {
-            setHash(window.location.hash);
-        };
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-
-    // On the initial server-side or pre-hydration render, return null
-    // to ensure there's no mismatch with the client environment.
-    if (!isClient) {
-        return null;
-    }
-
+    
     const path = hash.substring(1);
 
     // If the user is authenticated but we are still fetching their profile, show a loading screen.
@@ -149,7 +126,7 @@ const App = () => {
                 <OfflineBanner />
                 <SyncSuccessBanner />
                 <main className="flex-grow">
-                    <Router />
+                    <Router hash={hash} />
                 </main>
                 {!isAuthPage && <Footer />}
             </div>
