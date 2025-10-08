@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { AppContextProvider, useAppContext } from './context/AppContext.tsx';
 import Header from './components/Header.tsx';
@@ -121,7 +122,7 @@ const App = () => {
 
     return (
         <AppContextProvider>
-            <div className="flex flex-col min-h-screen bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark font-body">
+            <div className="flex flex-col min-h-screen bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark font-sans">
                 {!isAuthPage && <Header />}
                 <OfflineBanner />
                 <SyncSuccessBanner />

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { getRealDiagnosis } from '../../services/geminiService.ts';
@@ -11,14 +9,14 @@ import SkeletonLoader from '../SkeletonLoader.tsx';
 
 // --- Image Cropper Component (since we cannot add new files/dependencies) ---
 // A simplified version of an image cropper.
-const ImageCropper = ({ src, onCropComplete, onCancel }: { src: string; onCropComplete: (blob: Blob) => void; onCancel: () => void }) => {
+const ImageCropper = React.memo(({ src, onCropComplete, onCancel }: { src: string; onCropComplete: (blob: Blob) => void; onCancel: () => void }) => {
     const { t } = useAppContext();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     // Fixed 1:1 aspect ratio crop in the center
     const crop = { x: 10, y: 10, width: 80, height: 80 }; // % based
 
-    const handleCrop = () => {
+    const handleCrop = useCallback(() => {
         if (!imageRef.current || !canvasRef.current) return;
 
         const image = imageRef.current;
@@ -54,7 +52,7 @@ const ImageCropper = ({ src, onCropComplete, onCancel }: { src: string; onCropCo
                 onCropComplete(blob);
             }
         }, 'image/jpeg', 0.95);
-    };
+    }, [src, onCropComplete]);
     
     const cropBoxStyle: React.CSSProperties = {
         position: 'absolute',
@@ -88,10 +86,63 @@ const ImageCropper = ({ src, onCropComplete, onCancel }: { src: string; onCropCo
             </div>
         </div>
     );
-};
+});
 
 
 type DiagnosisResult = Omit<Report, 'id' | 'user_id' | 'user_email' | 'created_at' | 'photo_url'> & { photo: string };
+
+const ReportHistoryItem = React.memo(({ report, onSelect }: { report: Report; onSelect: (report: Report) => void; }) => (
+    <div onClick={() => onSelect(report)} className="flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
+        <img src={report.photo_url} alt="report" className="w-16 h-16 rounded-md object-cover flex-shrink-0" />
+        <div className="overflow-hidden">
+            <p className="font-semibold truncate">{report.disease}</p>
+            <p className="text-sm text-gray-500">{new Date(report.created_at).toLocaleDateString()}</p>
+        </div>
+    </div>
+));
+
+const DiagnosisResultDisplay = React.memo(({ data, t, handleDownloadReport, resetState }: { data: DiagnosisResult | Report; t: (key: any) => string; handleDownloadReport: () => void; resetState: () => void; }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md animate-fade-in">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <h2 className="text-2xl font-bold text-primary dark:text-primary-light">{t('diagnosis_result')}</h2>
+            <button onClick={handleDownloadReport} className="bg-secondary text-accent px-4 py-2 rounded-md hover:opacity-90 self-start sm:self-center">{t('download_report')}</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+                <img src={'photo' in data ? data.photo : data.photo_url} alt="Analyzed crop" className="rounded-lg w-full" />
+                <div className="mt-4 text-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <p className="text-lg font-semibold">{data.disease}</p>
+                    <p className="text-base text-gray-500">{t('confidence_score')}: <span className="font-bold text-lg">{data.confidence}%</span></p>
+                </div>
+            </div>
+            <div className="md:col-span-2 space-y-4">
+                <div>
+                    <h3 className="text-lg font-bold">{t('why_it_works')}</h3>
+                    <p className="text-base text-gray-600 dark:text-gray-300">{data.ai_explanation}</p>
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold">{t('recommended_treatment')}</h3>
+                    <p className="text-base text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{data.treatment}</p>
+                </div>
+                {data.similar_cases && data.similar_cases.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold">{t('similar_cases')}</h3>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                            {data.similar_cases.map(c => (
+                                <div key={c.id} className="text-center">
+                                    <img src={c.photo} alt={c.disease} className="w-20 h-20 rounded-md object-cover"/>
+                                    <p className="text-xs mt-1 w-20 truncate">{c.disease}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+        <button onClick={resetState} className="mt-6 text-primary hover:underline font-semibold">Start New Diagnosis</button>
+    </div>
+));
+
 
 const AIDiagnosis = () => {
     const { t, user, profile, isOnline, refreshPendingCount } = useAppContext();
@@ -123,7 +174,7 @@ const AIDiagnosis = () => {
         fetchHistory();
     }, [fetchHistory]);
 
-    const resetState = () => {
+    const resetState = useCallback(() => {
         setImageFile(null);
         setImagePreview(null);
         setUncroppedImage(null);
@@ -134,7 +185,7 @@ const AIDiagnosis = () => {
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-    };
+    }, []);
     
     const handleFileChange = (files: FileList | null) => {
         if (files && files.length > 0) {
@@ -147,15 +198,15 @@ const AIDiagnosis = () => {
         }
     };
     
-    const handleCropComplete = (croppedBlob: Blob) => {
+    const handleCropComplete = useCallback((croppedBlob: Blob) => {
         const croppedFile = new File([croppedBlob], "cropped_image.jpg", { type: "image/jpeg" });
         setImageFile(croppedFile);
         setImagePreview(URL.createObjectURL(croppedBlob));
         setUncroppedImage(null);
-    };
+    }, []);
 
-    const handleDiagnose = async () => {
-        if (!imageFile || !user || !profile) return;
+    const handleDiagnose = useCallback(async () => {
+        if (!imageFile || !user || !profile || !imagePreview) return;
         setLoading(true);
         setError('');
         setResult(null);
@@ -177,7 +228,7 @@ const AIDiagnosis = () => {
                 }
 
                 setResult({
-                    photo: imagePreview!,
+                    photo: imagePreview,
                     disease: diagnosisResult.disease,
                     confidence: diagnosisResult.confidence,
                     treatment: diagnosisResult.treatment,
@@ -197,8 +248,8 @@ const AIDiagnosis = () => {
                     };
                     await addReport(reportData, imageFile);
                     fetchHistory();
-                } catch (saveError) {
-                    console.error("Failed to save report:", saveError);
+                } catch (saveError: any) {
+                    console.error("Failed to save report:", saveError.message);
                     setError(t('error_saving_report'));
                 }
 
@@ -221,9 +272,9 @@ const AIDiagnosis = () => {
             resetState();
         }
         setLoading(false);
-    };
+    }, [imageFile, user, profile, isOnline, t, fetchHistory, refreshPendingCount, resetState, imagePreview]);
     
-    const handleDownloadReport = () => {
+    const handleDownloadReport = useCallback(() => {
         const reportData = result || selectedReport;
         if (!reportData) return;
         
@@ -252,49 +303,7 @@ const AIDiagnosis = () => {
             printWindow.document.close();
             printWindow.print();
         }
-    };
-
-    const renderResult = (data: DiagnosisResult | Report) => (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md animate-fade-in">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                <h2 className="text-2xl font-bold text-primary dark:text-primary-light">{t('diagnosis_result')}</h2>
-                <button onClick={handleDownloadReport} className="bg-secondary text-accent px-4 py-2 rounded-md hover:opacity-90 self-start sm:self-center">{t('download_report')}</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1">
-                    <img src={'photo' in data ? data.photo : data.photo_url} alt="Analyzed crop" className="rounded-lg w-full" />
-                    <div className="mt-4 text-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                        <p className="text-lg font-semibold">{data.disease}</p>
-                        <p className="text-base text-gray-500">{t('confidence_score')}: <span className="font-bold text-lg">{data.confidence}%</span></p>
-                    </div>
-                </div>
-                <div className="md:col-span-2 space-y-4">
-                    <div>
-                        <h3 className="text-lg font-bold">{t('why_it_works')}</h3>
-                        <p className="text-base text-gray-600 dark:text-gray-300">{data.ai_explanation}</p>
-                    </div>
-                     <div>
-                        <h3 className="text-lg font-bold">{t('recommended_treatment')}</h3>
-                        <p className="text-base text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{data.treatment}</p>
-                    </div>
-                    {data.similar_cases && data.similar_cases.length > 0 && (
-                        <div>
-                            <h3 className="text-lg font-bold">{t('similar_cases')}</h3>
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                                {data.similar_cases.map(c => (
-                                    <div key={c.id} className="text-center">
-                                        <img src={c.photo} alt={c.disease} className="w-20 h-20 rounded-md object-cover"/>
-                                        <p className="text-xs mt-1 w-20 truncate">{c.disease}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-             <button onClick={resetState} className="mt-6 text-primary hover:underline font-semibold">Start New Diagnosis</button>
-        </div>
-    );
+    }, [result, selectedReport]);
     
     return (
         <div>
@@ -306,8 +315,10 @@ const AIDiagnosis = () => {
                 />
             )}
             <h1 className="text-3xl font-bold mb-6 text-primary dark:text-primary-light">{t('ai_diagnosis')}</h1>
-
-            {result ? renderResult(result) : selectedReport ? renderResult(selectedReport) : (
+            
+            {result ? <DiagnosisResultDisplay data={result} t={t} handleDownloadReport={handleDownloadReport} resetState={resetState} />
+            : selectedReport ? <DiagnosisResultDisplay data={selectedReport} t={t} handleDownloadReport={handleDownloadReport} resetState={resetState} />
+            : (
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div className="lg:col-span-2">
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
@@ -344,13 +355,7 @@ const AIDiagnosis = () => {
                              {historyLoading ? <SkeletonLoader className="h-48" /> : (
                                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                                      {history.length > 0 ? history.map(report => (
-                                         <div key={report.id} onClick={() => setSelectedReport(report)} className="flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
-                                             <img src={report.photo_url} alt="report" className="w-16 h-16 rounded-md object-cover flex-shrink-0" />
-                                             <div className="overflow-hidden">
-                                                 <p className="font-semibold truncate">{report.disease}</p>
-                                                 <p className="text-sm text-gray-500">{new Date(report.created_at).toLocaleDateString()}</p>
-                                             </div>
-                                         </div>
+                                         <ReportHistoryItem key={report.id} report={report} onSelect={setSelectedReport} />
                                      )) : <p className="text-center text-gray-500 py-10">{t('no_reports_yet')}</p>}
                                  </div>
                              )}

@@ -8,6 +8,19 @@ import { Outcome } from '../../types.ts';
 import SkeletonLoader from '../SkeletonLoader.tsx';
 import { PendingIcon } from '../Icons.tsx';
 
+const OutcomeRow = React.memo(({ outcome, t }: { outcome: Outcome; t: (key: string) => string; }) => (
+    <tr className={`border-b dark:border-gray-700 last:border-b-0 ${outcome.id.startsWith('pending-') ? 'opacity-70' : ''}`}>
+        <td className="p-2 flex items-center gap-2">
+            {new Date(outcome.date).toLocaleDateString()}
+            {outcome.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500" title={t('pending_sync_status')} />}
+        </td>
+        <td className="p-2 font-semibold">{outcome.crop_name}</td>
+        <td className="p-2">{outcome.yield_amount} {outcome.yield_unit}</td>
+        <td className="p-2">{outcome.revenue.toLocaleString('en-IN')}</td>
+        <td className="p-2 text-sm text-gray-500">{outcome.notes}</td>
+    </tr>
+));
+
 const SuccessTracker = () => {
     const { t, user, isOnline, refreshData, refreshPendingCount } = useAppContext();
     const [outcomes, setOutcomes] = useState<Outcome[]>([]);
@@ -32,7 +45,7 @@ const SuccessTracker = () => {
         fetchData();
     }, [fetchData, refreshData]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !cropName || !yieldAmount || yieldAmount <= 0) return;
         
@@ -52,7 +65,7 @@ const SuccessTracker = () => {
             ...newOutcomeData,
         };
         
-        setOutcomes([optimisticOutcome, ...outcomes]);
+        setOutcomes(prev => [optimisticOutcome, ...prev]);
         
         setShowForm(false);
         setCropName('');
@@ -71,7 +84,7 @@ const SuccessTracker = () => {
             });
             refreshPendingCount(); // Instantly update the pending count in the header
         }
-    };
+    }, [user, cropName, yieldAmount, revenue, notes, isOnline, fetchData, refreshPendingCount]);
 
     return (
         <div>
@@ -101,18 +114,7 @@ const SuccessTracker = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {outcomes.map(o => (
-                                    <tr key={o.id} className={`border-b dark:border-gray-700 last:border-b-0 ${o.id.startsWith('pending-') ? 'opacity-70' : ''}`}>
-                                        <td className="p-2 flex items-center gap-2">
-                                            {new Date(o.date).toLocaleDateString()}
-                                            {o.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500" title={t('pending_sync_status')} />}
-                                        </td>
-                                        <td className="p-2 font-semibold">{o.crop_name}</td>
-                                        <td className="p-2">{o.yield_amount} {o.yield_unit}</td>
-                                        <td className="p-2">{o.revenue.toLocaleString('en-IN')}</td>
-                                        <td className="p-2 text-sm text-gray-500">{o.notes}</td>
-                                    </tr>
-                                ))}
+                                {outcomes.map(o => <OutcomeRow key={o.id} outcome={o} t={t} />)}
                             </tbody>
                         </table>
                         {outcomes.length === 0 && <p className="text-center py-8 text-gray-500">No harvests tracked yet.</p>}

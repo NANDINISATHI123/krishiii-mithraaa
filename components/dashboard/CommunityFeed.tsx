@@ -8,6 +8,23 @@ import { CommunityPost } from '../../types.ts';
 import SkeletonLoader from '../SkeletonLoader.tsx';
 import { UploadIcon, CloseIcon, PendingIcon } from '../Icons.tsx';
 
+const PostCard = React.memo(({ post, t }: { post: CommunityPost, t: (key: string) => string }) => (
+    <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md ${post.id.startsWith('pending-') ? 'opacity-70' : ''}`}>
+        <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">{post.profiles?.name?.charAt(0) || t('a_farmer').charAt(0)}</div>
+                <div>
+                    <p className="font-bold">{post.profiles?.name || t('a_farmer')}</p>
+                    <p className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
+                </div>
+            </div>
+            {post.id.startsWith('pending-') && <div className="flex items-center gap-1 text-xs text-yellow-500"><PendingIcon className="w-4 h-4"/><span>{t('pending_status')}</span></div>}
+        </div>
+        <p className="text-base mb-2 whitespace-pre-wrap">{post.content}</p>
+        {post.photo_url && <img src={post.photo_url} alt="Post attachment" className="rounded-lg max-h-80 w-auto mt-2" />}
+    </div>
+));
+
 const CommunityFeed = () => {
     const { t, user, profile, isOnline, refreshData, refreshPendingCount } = useAppContext();
     const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -36,14 +53,14 @@ const CommunityFeed = () => {
         }
     };
     
-    const clearInput = () => {
+    const clearInput = useCallback(() => {
         setNewPostContent('');
         setImageFile(null);
         setImagePreview(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-    };
+    }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPostContent.trim() || !user || !profile) return;
         
@@ -56,7 +73,7 @@ const CommunityFeed = () => {
             profiles: { name: profile.name },
         };
 
-        setPosts([optimisticPost, ...posts]);
+        setPosts(prev => [optimisticPost, ...prev]);
         const content = newPostContent;
         const file = imageFile;
         clearInput();
@@ -80,7 +97,7 @@ const CommunityFeed = () => {
             refreshPendingCount();
             alert(t('post_queued'));
         }
-    };
+    }, [newPostContent, imageFile, imagePreview, user, profile, isOnline, clearInput, fetchPosts, refreshPendingCount, t]);
 
     return (
         <div>
@@ -111,22 +128,7 @@ const CommunityFeed = () => {
                 {/* Feed */}
                 <div className="space-y-4">
                     {loading && <SkeletonLoader className="h-48" />}
-                    {posts.map(post => (
-                        <div key={post.id} className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md ${post.id.startsWith('pending-') ? 'opacity-70' : ''}`}>
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">{post.profiles?.name?.charAt(0) || t('a_farmer').charAt(0)}</div>
-                                    <div>
-                                        <p className="font-bold">{post.profiles?.name || t('a_farmer')}</p>
-                                        <p className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                                {post.id.startsWith('pending-') && <div className="flex items-center gap-1 text-xs text-yellow-500"><PendingIcon className="w-4 h-4"/><span>{t('pending_status')}</span></div>}
-                            </div>
-                            <p className="text-base mb-2 whitespace-pre-wrap">{post.content}</p>
-                            {post.photo_url && <img src={post.photo_url} alt="Post attachment" className="rounded-lg max-h-80 w-auto mt-2" />}
-                        </div>
-                    ))}
+                    {posts.map(post => <PostCard key={post.id} post={post} t={t} />)}
                 </div>
             </div>
         </div>

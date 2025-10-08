@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { getSuppliers } from '../../services/contentService.ts';
@@ -6,6 +7,25 @@ import { cacheContent, getCachedContent } from '../../services/offlineService.ts
 import { Supplier } from '../../types.ts';
 import SkeletonLoader from '../SkeletonLoader.tsx';
 import { SearchIcon, CallIcon, MapIcon, DownloadIcon } from '../Icons.tsx';
+
+const SupplierCard = React.memo(({ supplier, t }: { supplier: Supplier, t: (key: string) => string }) => (
+    <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
+        <h3 className="text-xl font-bold text-primary dark:text-primary-light">{supplier.name}</h3>
+        <p className="text-gray-500 mb-3">{supplier.district}</p>
+        <p className="font-semibold mb-1">{t('products_available')}:</p>
+        <p className="text-sm mb-4">{supplier.products.join(', ')}</p>
+        <div className="flex flex-col space-y-2">
+            <a href={`tel:${supplier.contact}`} className="flex items-center gap-2 text-blue-600 hover:underline">
+                <CallIcon className="w-4 h-4" />
+                <span>{t('contact')}: {supplier.contact}</span>
+            </a>
+            <a href={supplier.mapsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                <MapIcon className="w-4 h-4" />
+                <span>{t('get_directions')}</span>
+            </a>
+        </div>
+    </div>
+));
 
 const SuppliersDirectory = () => {
     const { t, isOnline } = useAppContext();
@@ -52,7 +72,7 @@ const SuppliersDirectory = () => {
         checkOfflineAvailability();
     }, [loadSuppliers, checkOfflineAvailability]);
     
-    const handleDownload = async () => {
+    const handleDownload = useCallback(async () => {
         setDownloadStatus('downloading');
         try {
             const data = await getSuppliers();
@@ -63,7 +83,7 @@ const SuppliersDirectory = () => {
             setDownloadStatus('idle');
             alert("Failed to download data.");
         }
-    };
+    }, []);
     
     const filteredSuppliers = useMemo(() => {
         return suppliers.filter(supplier =>
@@ -107,22 +127,7 @@ const SuppliersDirectory = () => {
             {!loading && !error && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredSuppliers.length > 0 ? filteredSuppliers.map(supplier => (
-                        <div key={supplier.id} className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
-                            <h3 className="text-xl font-bold text-primary dark:text-primary-light">{supplier.name}</h3>
-                            <p className="text-gray-500 mb-3">{supplier.district}</p>
-                            <p className="font-semibold mb-1">{t('products_available')}:</p>
-                            <p className="text-sm mb-4">{supplier.products.join(', ')}</p>
-                            <div className="flex flex-col space-y-2">
-                               <a href={`tel:${supplier.contact}`} className="flex items-center gap-2 text-blue-600 hover:underline">
-                                    <CallIcon className="w-4 h-4" />
-                                    <span>{t('contact')}: {supplier.contact}</span>
-                                </a>
-                                <a href={supplier.mapsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
-                                    <MapIcon className="w-4 h-4" />
-                                    <span>{t('get_directions')}</span>
-                                </a>
-                            </div>
-                        </div>
+                       <SupplierCard key={supplier.id} supplier={supplier} t={t} />
                     )) : (
                         <div className="md:col-span-2 lg:col-span-3 text-center py-10 text-gray-500">
                             {t('no_suppliers_for_search')}

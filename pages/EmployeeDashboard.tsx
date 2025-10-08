@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import AIDiagnosis from '../components/dashboard/AIDiagnosis.tsx';
@@ -31,26 +32,20 @@ const EmployeeDashboard = () => {
     ];
 
     const renderContent = () => {
-        switch (activeTab) {
-            case 'ai_diagnosis':
-                return <AIDiagnosis />;
-            case 'weather_alerts':
-                return <WeatherAlerts />;
-            case 'advisory_calendar':
-                return <AdvisoryCalendar />;
-            case 'knowledge_base':
-                return <KnowledgeBase />;
-            case 'success_tracker':
-                return <SuccessTracker />;
-            case 'suppliers_directory':
-                return <SuppliersDirectory />;
-            case 'video_tutorials':
-                return <VideoTutorials />;
-            case 'community_feed':
-                return <CommunityFeed />;
-            default:
-                return null;
-        }
+        // Performance optimization: Using CSS to hide/show keeps component state
+        // (like scroll position or data) alive when switching tabs, making the UI feel instant.
+        return (
+            <>
+                <div style={{ display: activeTab === 'ai_diagnosis' ? 'block' : 'none' }}><AIDiagnosis /></div>
+                <div style={{ display: activeTab === 'weather_alerts' ? 'block' : 'none' }}><WeatherAlerts /></div>
+                <div style={{ display: activeTab === 'advisory_calendar' ? 'block' : 'none' }}><AdvisoryCalendar /></div>
+                <div style={{ display: activeTab === 'knowledge_base' ? 'block' : 'none' }}><KnowledgeBase /></div>
+                <div style={{ display: activeTab === 'success_tracker' ? 'block' : 'none' }}><SuccessTracker /></div>
+                <div style={{ display: activeTab === 'suppliers_directory' ? 'block' : 'none' }}><SuppliersDirectory /></div>
+                <div style={{ display: activeTab === 'video_tutorials' ? 'block' : 'none' }}><VideoTutorials /></div>
+                <div style={{ display: activeTab === 'community_feed' ? 'block' : 'none' }}><CommunityFeed /></div>
+            </>
+        )
     };
     
     const SidebarContent = () => (

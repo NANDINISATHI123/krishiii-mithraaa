@@ -12,7 +12,7 @@ export const getPosts = async (): Promise<CommunityPost[]> => {
         .order('created_at', { ascending: false });
     
     if (error) {
-        console.error('Error fetching posts:', error);
+        console.error('Error fetching posts:', error.message);
         return [];
     }
     return data as any[];
@@ -63,7 +63,7 @@ export const getFeedback = async (): Promise<Feedback[]> => {
         .order('created_at', { ascending: false });
     
     if (error) {
-        console.error('Error fetching feedback:', error);
+        console.error('Error fetching feedback:', error.message);
         return [];
     }
     return data as any[];
@@ -77,7 +77,7 @@ export const addFeedback = async (message: string, profile: Profile): Promise<Fe
         .single();
     
     if (error) {
-        console.error('Error adding feedback:', error);
+        console.error('Error adding feedback:', error.message);
         return null;
     }
     return data;
@@ -90,7 +90,7 @@ export const deleteFeedback = async (id: string): Promise<boolean> => {
         .eq('id', id);
 
     if (error) {
-        console.error('Error deleting feedback:', error);
+        console.error('Error deleting feedback:', error.message);
         return false;
     }
     return true;
@@ -101,7 +101,7 @@ export const deleteFeedback = async (id: string): Promise<boolean> => {
 export const getAllPostsAdmin = async (): Promise<CommunityPost[]> => {
     const { data, error } = await supabase.rpc('get_all_posts_admin');
     if (error) {
-        console.error('Error fetching all posts for admin via RPC:', error);
+        console.error('Error fetching all posts for admin via RPC:', error.message);
         return [];
     }
     return data as any[];
@@ -110,7 +110,7 @@ export const getAllPostsAdmin = async (): Promise<CommunityPost[]> => {
 export const getAllFeedbackAdmin = async (): Promise<Feedback[]> => {
     const { data, error } = await supabase.rpc('get_all_feedback_admin');
     if (error) {
-        console.error('Error fetching all feedback for admin via RPC:', error);
+        console.error('Error fetching all feedback for admin via RPC:', error.message);
         return [];
     }
     return data as any[];

@@ -38,14 +38,22 @@ export const addOutcome = async (outcomeData: Omit<Outcome, 'id' | 'created_at'>
 };
 
 /**
- * Fetches all harvest outcomes (for admin view) via a secure RPC call.
- * NOTE: Requires a corresponding `get_all_outcomes_admin` function in the database.
+ * Fetches all harvest outcomes (for admin view) by joining with profiles.
  */
 export const getAllOutcomes = async (): Promise<(Outcome & { profiles: { name: string, email: string } })[]> => {
-    const { data, error } = await supabase.rpc('get_all_outcomes_admin');
+    // NOTE: Switched from a faulty RPC ('get_all_outcomes_admin') to a standard select with a join.
+    // This resolves the "structure of query does not match" error and assumes the admin role
+    // has appropriate RLS policies to read from both tables.
+    const { data, error } = await supabase
+        .from('outcomes')
+        .select(`
+            *,
+            profiles (name, email)
+        `)
+        .order('date', { ascending: false });
     
     if (error) {
-        console.error('Error fetching all outcomes via RPC:', error);
+        console.error('Error fetching all outcomes:', error.message);
         return [];
     }
     return data as any[];

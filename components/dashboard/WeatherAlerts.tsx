@@ -1,12 +1,41 @@
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { getRealForecast, getMockWeatherRisk } from '../../services/weatherService.ts';
 import { cacheContent, getCachedContent } from '../../services/offlineService.ts';
 import { WeatherRisk } from '../../types.ts';
 import { SunIcon, RainIcon, CloudyIcon, ThunderstormIcon } from '../Icons.tsx';
 import SkeletonLoader from '../SkeletonLoader.tsx';
+
+const getWeatherIcon = (code: number, className: string = "w-10 h-10") => {
+    if ([0, 1].includes(code)) return <SunIcon className={className} />;
+    if ([2, 3, 45, 48].includes(code)) return <CloudyIcon className={className} />;
+    if (code >= 51 && code <= 67) return <RainIcon className={className} />;
+    if (code >= 80 && code <= 82) return <RainIcon className={className} />;
+    if (code >= 95 && code <= 99) return <ThunderstormIcon className={className} />;
+    return <CloudyIcon className={className} />; // Default
+};
+
+const HourlyForecastItem = React.memo(({ time, code, temp, language }: { time: string, code: number, temp: number, language: string }) => (
+    <div className="text-center flex-shrink-0 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 w-20">
+        <p className="text-sm font-semibold">{new Date(time).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}</p>
+        {getWeatherIcon(code, "w-10 h-10 mx-auto my-1")}
+        <p className="font-bold text-lg">{Math.round(temp)}°C</p>
+    </div>
+));
+
+const DailyForecastItem = React.memo(({ date, code, maxTemp, minTemp, language }: { date: string, code: number, maxTemp: number, minTemp: number, language: string }) => (
+    <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+        <p className="font-semibold w-1/3">{new Date(date).toLocaleDateString(language, { weekday: 'long' })}</p>
+        <div className="w-1/3 flex justify-center">
+            {getWeatherIcon(code, "w-8 h-8")}
+        </div>
+        <p className="w-1/3 text-right">
+            <span className="font-bold">{Math.round(maxTemp)}°</span>
+            <span className="text-gray-500"> / {Math.round(minTemp)}°</span>
+        </p>
+    </div>
+));
+
 
 const WeatherAlerts: React.FC = () => {
     const { t, language, isOnline } = useAppContext();
@@ -21,22 +50,19 @@ const WeatherAlerts: React.FC = () => {
             setError('');
 
             // --- Step 1: Cache-First Strategy ---
-            // Immediately try to load weather from the local cache to provide a fast, offline-first experience.
             try {
                 const cachedData = await getCachedContent('weather_forecast');
                 if (cachedData) {
                     setWeatherData(cachedData.forecast);
                     setRiskAlert(cachedData.risk);
                 }
-            } catch (e) {
-                console.error("Failed to read weather from cache", e);
+            } catch (e: any) {
+                console.error("Failed to read weather from cache", e.message);
             } finally {
-                // We've either loaded from cache or found nothing, so the initial blocking load is complete.
                 setLoading(false);
             }
 
             // --- Step 2: Network Fetch (if online) ---
-            // If the user is online, attempt to get a fresh forecast.
             if (isOnline) {
                 if (!navigator.geolocation) {
                     setError(t('weather_location_error'));
@@ -50,44 +76,28 @@ const WeatherAlerts: React.FC = () => {
                             const forecast = await getRealForecast(latitude, longitude);
                             const risk = await getMockWeatherRisk(forecast.current, language);
                             
-                            // Update the UI state with the fresh data.
                             setWeatherData(forecast);
                             setRiskAlert(risk);
-                            setError(''); // Clear any old errors (e.g., a previous location failure).
+                            setError('');
                             
-                            // Update the cache for future offline use.
                             await cacheContent('weather_forecast', { forecast, risk });
 
-                        } catch (fetchError) {
-                            console.error("Failed to fetch fresh weather data:", fetchError);
-                            // If fetching fails but we have cached data, we don't need to show a blocking error.
-                            // The user will just see the stale data.
+                        } catch (fetchError: any) {
+                            console.error("Failed to fetch fresh weather data:", fetchError.message);
                         }
                     },
                     (geoError) => {
-                        console.error("Geolocation error:", geoError);
-                        // Show a non-blocking error. The user will still see the cached data if it exists.
+                        console.error("Geolocation error:", geoError.message);
                         setError(t('weather_location_error'));
                     }
                 );
             } else if (!weatherData) {
-                // If offline and we failed to load from cache, show the offline error.
                 setError(t('weather_unavailable_offline'));
             }
         };
 
         loadWeather();
     }, [isOnline, t, language]);
-
-
-    const getWeatherIcon = (code: number, className: string = "w-10 h-10") => {
-        if ([0, 1].includes(code)) return <SunIcon className={className} />;
-        if ([2, 3, 45, 48].includes(code)) return <CloudyIcon className={className} />;
-        if (code >= 51 && code <= 67) return <RainIcon className={className} />;
-        if (code >= 80 && code <= 82) return <RainIcon className={className} />;
-        if (code >= 95 && code <= 99) return <ThunderstormIcon className={className} />;
-        return <CloudyIcon className={className} />; // Default
-    };
 
     const riskColor = riskAlert?.severity === 'High' ? 'red' : riskAlert?.severity === 'Medium' ? 'yellow' : 'green';
 
@@ -174,11 +184,13 @@ const WeatherAlerts: React.FC = () => {
                         <h3 className="font-semibold text-lg mb-4">{t('hourly_forecast')}</h3>
                         <div className="flex justify-between space-x-2 overflow-x-auto">
                             {weatherData.hourly.time.slice(0, 6).map((time: string, index: number) => (
-                                <div key={time} className="text-center flex-shrink-0 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 w-20">
-                                    <p className="text-sm font-semibold">{new Date(time).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}</p>
-                                    {getWeatherIcon(weatherData.hourly.weather_code[index], "w-10 h-10 mx-auto my-1")}
-                                    <p className="font-bold text-lg">{Math.round(weatherData.hourly.temperature_2m[index])}°C</p>
-                                </div>
+                                <HourlyForecastItem 
+                                    key={time}
+                                    time={time}
+                                    code={weatherData.hourly.weather_code[index]}
+                                    temp={weatherData.hourly.temperature_2m[index]}
+                                    language={language}
+                                />
                             ))}
                         </div>
                     </div>
@@ -189,16 +201,14 @@ const WeatherAlerts: React.FC = () => {
                     <h3 className="font-semibold text-lg mb-4">{t('daily_forecast')}</h3>
                     <div className="space-y-3">
                         {weatherData.daily.time.map((date: string, index: number) => (
-                            <div key={date} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                <p className="font-semibold w-1/3">{new Date(date).toLocaleDateString(language, { weekday: 'long' })}</p>
-                                <div className="w-1/3 flex justify-center">
-                                    {getWeatherIcon(weatherData.daily.weather_code[index], "w-8 h-8")}
-                                </div>
-                                <p className="w-1/3 text-right">
-                                    <span className="font-bold">{Math.round(weatherData.daily.temperature_2m_max[index])}°</span>
-                                    <span className="text-gray-500"> / {Math.round(weatherData.daily.temperature_2m_min[index])}°</span>
-                                </p>
-                            </div>
+                           <DailyForecastItem
+                                key={date}
+                                date={date}
+                                code={weatherData.daily.weather_code[index]}
+                                maxTemp={weatherData.daily.temperature_2m_max[index]}
+                                minTemp={weatherData.daily.temperature_2m_min[index]}
+                                language={language}
+                           />
                         ))}
                     </div>
                 </div>

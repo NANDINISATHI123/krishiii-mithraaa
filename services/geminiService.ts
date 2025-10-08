@@ -4,11 +4,11 @@ import { GoogleGenAI, Type } from '@google/genai';
 // Simulate a network delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-// --- WARNING: FOR DEMONSTRATION PURPOSES ONLY ---
-// This key is hardcoded for simplicity in a no-build, drag-and-drop environment.
-// In a real-world production application, you MUST NEVER expose your API key on the client side.
-// It should be stored securely in a backend environment variable and accessed via a serverless function or API endpoint.
-const API_KEY = 'AIzaSyC_5T97s0p44Net_fHc0O_zRE747liRyBg';
+// Per project requirements, the API key must be sourced from environment variables.
+// In a no-build environment, this assumes `process.env.API_KEY` is made available
+// to the browser context through external means.
+// The app will gracefully fall back to mock data if the key is not available.
+const API_KEY = process.env.API_KEY;
 
 
 // Helper function to convert a File object to a GoogleGenerativeAI.Part object.

@@ -1,5 +1,3 @@
-
-
 import { Supplier, Tutorial } from '../types.ts';
 import { supabase } from '../lib/supabaseClient.ts';
 import { mockTutorials } from '../lib/data.ts';
@@ -10,7 +8,7 @@ export const getTutorials = async (isAdmin: boolean = false): Promise<Tutorial[]
         // Use RPC for admin to bypass RLS
         const { data, error } = await supabase.rpc('get_all_tutorials_admin');
         if (error) {
-            console.error('Error fetching admin tutorials:', error);
+            console.error('Error fetching admin tutorials:', error.message);
             return [];
         }
         return data;
@@ -18,7 +16,7 @@ export const getTutorials = async (isAdmin: boolean = false): Promise<Tutorial[]
 
     const { data, error } = await supabase.from('tutorials').select('*').order('created_at', { ascending: false });
     if (error) {
-        console.error('Error fetching tutorials, falling back to mock data:', error);
+        console.error('Error fetching tutorials, falling back to mock data:', error.message);
         return mockTutorials;
     }
     if (!data || data.length === 0) {
@@ -31,7 +29,7 @@ export const getTutorials = async (isAdmin: boolean = false): Promise<Tutorial[]
 export const saveTutorial = async (tutorial: Omit<Tutorial, 'id' | 'created_at'>): Promise<Tutorial | null> => {
     const { data, error } = await supabase.from('tutorials').insert(tutorial).select().single();
     if (error) {
-        console.error('Error saving tutorial:', error);
+        console.error('Error saving tutorial:', error.message);
         return null;
     }
     return data;
@@ -40,7 +38,7 @@ export const saveTutorial = async (tutorial: Omit<Tutorial, 'id' | 'created_at'>
 export const updateTutorial = async (tutorial: Tutorial): Promise<Tutorial | null> => {
     const { data, error } = await supabase.from('tutorials').update(tutorial).eq('id', tutorial.id).select().single();
     if (error) {
-        console.error('Error updating tutorial:', error);
+        console.error('Error updating tutorial:', error.message);
         return null;
     }
     return data;
@@ -49,7 +47,7 @@ export const updateTutorial = async (tutorial: Tutorial): Promise<Tutorial | nul
 export const deleteTutorial = async (id: string): Promise<boolean> => {
     const { error } = await supabase.from('tutorials').delete().eq('id', id);
     if (error) {
-        console.error('Error deleting tutorial:', error);
+        console.error('Error deleting tutorial:', error.message);
         return false;
     }
     return true;
@@ -61,14 +59,14 @@ export const getSuppliers = async (isAdmin: boolean = false): Promise<Supplier[]
         // Use RPC for admin to bypass RLS
         const { data, error } = await supabase.rpc('get_all_suppliers_admin');
         if (error) {
-            console.error('Error fetching admin suppliers:', error);
+            console.error('Error fetching admin suppliers:', error.message);
             return [];
         }
         return data;
     }
     const { data, error } = await supabase.from('suppliers').select('*').order('name');
     if (error) {
-        console.error('Error fetching suppliers:', error);
+        console.error('Error fetching suppliers:', error.message);
         return [];
     }
     return data;
@@ -77,7 +75,7 @@ export const getSuppliers = async (isAdmin: boolean = false): Promise<Supplier[]
 export const saveSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at'>): Promise<Supplier | null> => {
     const { data, error } = await supabase.from('suppliers').insert(supplier).select().single();
     if (error) {
-        console.error('Error saving supplier:', error);
+        console.error('Error saving supplier:', error.message);
         return null;
     }
     return data;
@@ -86,7 +84,7 @@ export const saveSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at'>
 export const updateSupplier = async (supplier: Supplier): Promise<Supplier | null> => {
     const { data, error } = await supabase.from('suppliers').update(supplier).eq('id', supplier.id).select().single();
     if (error) {
-        console.error('Error updating supplier:', error);
+        console.error('Error updating supplier:', error.message);
         return null;
     }
     return data;
@@ -95,7 +93,7 @@ export const updateSupplier = async (supplier: Supplier): Promise<Supplier | nul
 export const deleteSupplier = async (id: string): Promise<boolean> => {
     const { error } = await supabase.from('suppliers').delete().eq('id', id);
     if (error) {
-        console.error('Error deleting supplier:', error);
+        console.error('Error deleting supplier:', error.message);
         return false;
     }
     return true;

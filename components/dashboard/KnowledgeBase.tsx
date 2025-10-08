@@ -8,6 +8,20 @@ import { KnowledgeAnswer, QuestionHistory, Bookmark } from '../../types.ts';
 import { SearchIcon, BookmarkIcon, PendingIcon, SpeakerIcon, MicrophoneIcon } from '../Icons.tsx';
 import SkeletonLoader from '../SkeletonLoader.tsx';
 
+const HistoryItem = React.memo(({ item, onSearch, t }: { item: QuestionHistory; onSearch: (query: string) => void; t: (key: string) => string }) => (
+    <li className="text-base text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer flex items-center justify-between" onClick={() => onSearch(item.question)}>
+        <span>{item.question}</span>
+        {item.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" title={t('pending_sync_status')} />}
+    </li>
+));
+
+const BookmarkItem = React.memo(({ item, onSelect, t }: { item: Bookmark; onSelect: (bookmark: Bookmark) => void; t: (key: string) => string }) => (
+    <li className="text-base text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer flex items-center justify-between" onClick={() => onSelect(item)}>
+        <span>{item.question}</span>
+        {item.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" title={t('pending_sync_status')} />}
+    </li>
+));
+
 const KnowledgeBase = () => {
     const { t, user, language, isOnline, refreshData, refreshPendingCount } = useAppContext();
     const [query, setQuery] = useState('');
@@ -92,7 +106,7 @@ const KnowledgeBase = () => {
         }
     };
     
-    const handleBookmark = async () => {
+    const handleBookmark = useCallback(async () => {
         if (!answer || !user) return;
         
         const optimisticBookmark: Bookmark = {
@@ -123,7 +137,11 @@ const KnowledgeBase = () => {
             // Revert optimistic update
             setBookmarks(prev => prev.filter(b => b.id !== optimisticBookmark.id));
         }
-    }
+    }, [answer, user, isOnline, refreshPendingCount]);
+
+    const handleSelectBookmark = useCallback((bookmark: Bookmark) => {
+        setAnswer({ ...bookmark, likes: 0, dislikes: 0, related: [] });
+    }, []);
 
     return (
         <div>
@@ -180,23 +198,13 @@ const KnowledgeBase = () => {
                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                         <h3 className="text-lg font-bold mb-2">{t('history_title')}</h3>
                         <ul className="space-y-1 max-h-48 overflow-y-auto">
-                            {history.map(h => (
-                                <li key={h.id} className="text-base text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer flex items-center justify-between" onClick={() => handleSearch(h.question)}>
-                                    <span>{h.question}</span>
-                                    {h.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" title={t('pending_sync_status')} />}
-                                </li>
-                            ))}
+                            {history.map(h => <HistoryItem key={h.id} item={h} onSearch={handleSearch} t={t} />)}
                         </ul>
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                         <h3 className="text-lg font-bold mb-2">{t('bookmarks_title')}</h3>
                          <ul className="space-y-1 max-h-48 overflow-y-auto">
-                            {bookmarks.map(b => (
-                                <li key={b.id} className="text-base text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer flex items-center justify-between" onClick={() => setAnswer({ ...b, likes: 0, dislikes: 0, related: [] })}>
-                                    <span>{b.question}</span>
-                                    {b.id.startsWith('pending-') && <PendingIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" title={t('pending_sync_status')} />}
-                                </li>
-                            ))}
+                            {bookmarks.map(b => <BookmarkItem key={b.id} item={b} onSelect={handleSelectBookmark} t={t} />)}
                         </ul>
                     </div>
                 </div>

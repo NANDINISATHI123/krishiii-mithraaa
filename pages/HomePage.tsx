@@ -1,17 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { mockTestimonials } from '../lib/data.ts';
 import { UploadIcon, AiIcon, SolutionIcon, ArrowRightIcon } from '../components/Icons.tsx';
 
-const HomePage = () => {
-  const { t, language } = useAppContext();
-  
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
-    e.preventDefault();
-    window.location.hash = hash;
-  };
-
-  const HowItWorksCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+const HowItWorksCard = React.memo(({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center transform hover:scale-105 transition-transform duration-300">
       <div className="flex justify-center items-center mb-4 text-primary dark:text-primary-light">
         {icon}
@@ -19,9 +11,10 @@ const HomePage = () => {
       <h3 className="text-xl font-bold mb-2 text-text-light dark:text-text-dark">{title}</h3>
       <p className="text-gray-600 dark:text-gray-300">{description}</p>
     </div>
-  );
+));
 
-  const TestimonialSlider = () => {
+const TestimonialSlider = React.memo(() => {
+    const { language } = useAppContext();
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -50,7 +43,15 @@ const HomePage = () => {
             </div>
         </div>
     );
-  };
+});
+
+const HomePage = () => {
+  const { t } = useAppContext();
+  
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+    e.preventDefault();
+    window.location.hash = hash;
+  }, []);
 
   return (
     <div className="bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark">

@@ -35,18 +35,20 @@ export const getUserTaskStatuses = async (userId: string): Promise<UserTaskStatu
             return [];
         }
         return data;
-    } catch (e) {
-        console.error('A critical error occurred while fetching task statuses:', e);
+    } catch (e: any) {
+        console.error('A critical error occurred while fetching task statuses:', e.message);
         return [];
     }
 };
 
 export const updateTaskStatus = async (userId: string, taskId: string, isDone: boolean): Promise<UserTaskStatus | null> => {
-    const { data, error } = await supabase
-        .from('user_task_status')
-        .upsert({ user_id: userId, task_id: taskId, is_done: isDone }, { onConflict: 'user_id, task_id' })
-        .select()
-        .single();
+    // Using RPC to call a SECURITY DEFINER function on the backend.
+    // This is the correct way to handle writes that should be permitted by RLS policies.
+    const { data, error } = await supabase.rpc('update_user_task_status', {
+        p_user_id: userId,
+        p_task_id: taskId,
+        p_is_done: isDone,
+    });
     
     if (error) {
         console.error('Error updating task status:', error.message);
@@ -59,7 +61,7 @@ export const updateTaskStatus = async (userId: string, taskId: string, isDone: b
 export const getTasks = async (): Promise<CalendarTask[]> => {
     const { data, error } = await supabase.from('calendar_tasks').select('*').order('month').order('day_of_month');
     if (error) {
-        console.error('Error fetching all tasks:', error);
+        console.error('Error fetching all tasks:', error.message);
         return [];
     }
     return data;
@@ -68,7 +70,7 @@ export const getTasks = async (): Promise<CalendarTask[]> => {
 export const saveTask = async (task: Omit<CalendarTask, 'id' | 'created_at'>): Promise<CalendarTask | null> => {
     const { data, error } = await supabase.from('calendar_tasks').insert(task).select().single();
     if (error) {
-        console.error('Error saving task:', error);
+        console.error('Error saving task:', error.message);
         return null;
     }
     return data;
@@ -77,7 +79,7 @@ export const saveTask = async (task: Omit<CalendarTask, 'id' | 'created_at'>): P
 export const updateTask = async (task: CalendarTask): Promise<CalendarTask | null> => {
     const { data, error } = await supabase.from('calendar_tasks').update(task).eq('id', task.id).select().single();
     if (error) {
-        console.error('Error updating task:', error);
+        console.error('Error updating task:', error.message);
         return null;
     }
     return data;
@@ -86,7 +88,7 @@ export const updateTask = async (task: CalendarTask): Promise<CalendarTask | nul
 export const deleteTask = async (id: string): Promise<boolean> => {
     const { error } = await supabase.from('calendar_tasks').delete().eq('id', id);
     if (error) {
-        console.error('Error deleting task:', error);
+        console.error('Error deleting task:', error.message);
         return false;
     }
     return true;

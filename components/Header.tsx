@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { supabase } from '../lib/supabaseClient.ts';
 import { LogoIcon, SunIcon, MoonIcon, MenuIcon, CloseIcon, LogoutIcon } from './Icons.tsx';
 
-const Header = () => {
+const Header = React.memo(() => {
   const { theme, toggleTheme, language, setLanguage, t, profile, isSidebarOpen, setIsSidebarOpen } = useAppContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
     e.preventDefault();
     window.location.hash = hash;
     setIsMenuOpen(false);
-  };
+  }, []);
 
-  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleLogout = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -23,7 +23,7 @@ const Header = () => {
     window.location.hash = '';
     setIsMenuOpen(false);
     setIsSidebarOpen(false);
-  };
+  }, [setIsSidebarOpen]);
 
   if (profile) {
     // Simplified header for logged-in users (dashboard view)
@@ -126,6 +126,6 @@ const Header = () => {
       )}
     </header>
   );
-};
+});
 
 export default Header;

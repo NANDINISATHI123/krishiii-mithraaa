@@ -1,6 +1,5 @@
 // Simulate a network delay
-import { WeatherRisk } from '../types.ts';
-import { Language } from '../lib/translations.ts';
+import { WeatherRisk, Language } from '../types.ts';
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 const W_CODE: { [key: number]: string } = {

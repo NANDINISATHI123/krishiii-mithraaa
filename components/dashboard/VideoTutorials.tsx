@@ -42,9 +42,65 @@ const deleteVideoFromDB = async (id: string) => {
   tx.objectStore(STORE_NAME).delete(id);
 };
 
-interface TutorialCardProps {
+const TutorialCard = React.memo(({ tutorial, isOffline, isDownloading, onDownload, onRemove, language, t, isOnline }: {
     tutorial: Tutorial;
-}
+    isOffline: boolean;
+    isDownloading: 'downloading' | 'failed' | undefined;
+    onDownload: (tutorial: Tutorial) => void;
+    onRemove: (id: string) => void;
+    language: string;
+    t: (key: string) => string;
+    isOnline: boolean;
+}) => {
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        let objectUrl: string | null = null;
+        if (isOffline) {
+            getVideoFromDB(tutorial.id).then(blob => {
+                if (blob) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setVideoUrl(objectUrl);
+                }
+            });
+        } else {
+            setVideoUrl(tutorial.videoUrl);
+        }
+        return () => {
+            if(objectUrl) URL.revokeObjectURL(objectUrl);
+        }
+    }, [tutorial.id, tutorial.videoUrl, isOffline]);
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <div className="aspect-video bg-black flex items-center justify-center">
+                {videoUrl ? (
+                     <video src={videoUrl} controls poster={tutorial.thumbnail} className="w-full h-full object-cover"></video>
+                ) : (
+                     <SkeletonLoader className="w-full h-full" />
+                )}
+            </div>
+            <div className="p-4">
+                <h3 className="font-bold text-lg">{language === 'te' ? tutorial.title_te : tutorial.title}</h3>
+                <p className="text-sm text-gray-500 mb-2">{tutorial.category}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 h-10 overflow-hidden">{language === 'te' ? tutorial.description_te : tutorial.description}</p>
+                {isOffline ? (
+                    <button onClick={() => onRemove(tutorial.id)} className="w-full py-2 text-sm font-semibold rounded-md bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">{t('offline_available')}</button>
+                ) : (
+                    <button 
+                        onClick={() => onDownload(tutorial)} 
+                        disabled={!isOnline || isDownloading === 'downloading'}
+                        className={`w-full py-2 text-sm font-semibold rounded-md ${
+                            isDownloading === 'failed' ? 'bg-yellow-100 text-yellow-700' : 'bg-secondary text-accent'
+                        } disabled:bg-gray-400`}
+                    >
+                        {isDownloading === 'downloading' ? t('downloading') : isDownloading === 'failed' ? t('download_failed') : t('download_for_offline')}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+});
 
 const VideoTutorials = () => {
     const { t, isOnline, language } = useAppContext();
@@ -86,7 +142,7 @@ const VideoTutorials = () => {
         updateOfflineStatus();
     }, [updateOfflineStatus]);
 
-    const handleDownload = async (tutorial: Tutorial) => {
+    const handleDownload = useCallback(async (tutorial: Tutorial) => {
         if (!isOnline) { alert("Downloads require an internet connection."); return; }
         setDownloading(prev => ({ ...prev, [tutorial.id]: 'downloading' }));
         try {
@@ -95,17 +151,21 @@ const VideoTutorials = () => {
             const blob = await response.blob();
             await saveVideoToDB(tutorial.id, blob);
             await updateOfflineStatus();
-            setDownloading(prev => ({ ...prev, [tutorial.id]: undefined }));
-        } catch (error) {
-            console.error('Download failed:', error);
+            setDownloading(prev => {
+                const newState = {...prev};
+                delete newState[tutorial.id];
+                return newState;
+            });
+        } catch (error: any) {
+            console.error('Download failed:', error.message);
             setDownloading(prev => ({ ...prev, [tutorial.id]: 'failed' }));
         }
-    };
+    }, [isOnline, updateOfflineStatus]);
     
-    const handleRemoveOffline = async (tutorialId: string) => {
+    const handleRemoveOffline = useCallback(async (tutorialId: string) => {
         await deleteVideoFromDB(tutorialId);
         await updateOfflineStatus();
-    };
+    }, [updateOfflineStatus]);
     
     const filteredTutorials = useMemo(() => {
         let list = tutorials;
@@ -117,50 +177,6 @@ const VideoTutorials = () => {
         }
         return list;
     }, [tutorials, selectedCategory, viewMode, offlineVideoIds]);
-
-    const TutorialCard: React.FC<TutorialCardProps> = ({ tutorial }) => {
-        const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
-        useEffect(() => {
-            if (offlineVideoIds.has(tutorial.id)) {
-                getVideoFromDB(tutorial.id).then(blob => {
-                    if (blob) setVideoUrl(URL.createObjectURL(blob));
-                });
-            } else {
-                setVideoUrl(tutorial.videoUrl);
-            }
-        }, [tutorial.id, tutorial.videoUrl, offlineVideoIds]);
-
-        return (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-                <div className="aspect-video bg-black flex items-center justify-center">
-                    {videoUrl ? (
-                         <video src={videoUrl} controls poster={tutorial.thumbnail} className="w-full h-full object-cover"></video>
-                    ) : (
-                         <SkeletonLoader className="w-full h-full" />
-                    )}
-                </div>
-                <div className="p-4">
-                    <h3 className="font-bold text-lg">{language === 'te' ? tutorial.title_te : tutorial.title}</h3>
-                    <p className="text-sm text-gray-500 mb-2">{tutorial.category}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 h-10 overflow-hidden">{language === 'te' ? tutorial.description_te : tutorial.description}</p>
-                    {offlineVideoIds.has(tutorial.id) ? (
-                        <button onClick={() => handleRemoveOffline(tutorial.id)} className="w-full py-2 text-sm font-semibold rounded-md bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">{t('offline_available')}</button>
-                    ) : (
-                        <button 
-                            onClick={() => handleDownload(tutorial)} 
-                            disabled={!isOnline || downloading[tutorial.id] === 'downloading'}
-                            className={`w-full py-2 text-sm font-semibold rounded-md ${
-                                downloading[tutorial.id] === 'failed' ? 'bg-yellow-100 text-yellow-700' : 'bg-secondary text-accent'
-                            } disabled:bg-gray-400`}
-                        >
-                            {downloading[tutorial.id] === 'downloading' ? t('downloading') : downloading[tutorial.id] === 'failed' ? t('download_failed') : t('download_for_offline')}
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
 
     return (
         <div>
@@ -185,7 +201,19 @@ const VideoTutorials = () => {
             ) : (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredTutorials.length > 0 ? (
-                        filteredTutorials.map(tut => <TutorialCard key={tut.id} tutorial={tut} />)
+                        filteredTutorials.map(tut => (
+                            <TutorialCard 
+                                key={tut.id} 
+                                tutorial={tut}
+                                isOffline={offlineVideoIds.has(tut.id)}
+                                isDownloading={downloading[tut.id]}
+                                onDownload={handleDownload}
+                                onRemove={handleRemoveOffline}
+                                language={language}
+                                t={t}
+                                isOnline={isOnline}
+                            />
+                        ))
                     ) : (
                         <p className="md:col-span-2 lg:col-span-3 text-center py-10 text-gray-500">
                             {viewMode === 'offline' ? t('no_offline_videos_message') : t('no_tutorials_in_category_message')}

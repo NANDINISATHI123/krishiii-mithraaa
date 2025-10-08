@@ -1,15 +1,14 @@
-import { KnowledgeAnswer, QuestionHistory, Bookmark } from '../types.ts';
+import { KnowledgeAnswer, QuestionHistory, Bookmark, Language } from '../types.ts';
 import { GoogleGenAI, Type } from '@google/genai';
-import { Language } from '../lib/translations.ts';
 import { supabase } from '../lib/supabaseClient.ts';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-// --- WARNING: FOR DEMONSTRATION PURPOSES ONLY ---
-// This key is hardcoded for simplicity in a no-build, drag-and-drop environment.
-// In a real-world production application, you MUST NEVER expose your API key on the client side.
-// It should be stored securely in a backend environment variable and accessed via a serverless function or API endpoint.
-const API_KEY = 'AIzaSyC_5T97s0p44Net_fHc0O_zRE747liRyBg';
+// Per project requirements, the API key must be sourced from environment variables.
+// In a no-build environment, this assumes `process.env.API_KEY` is made available
+// to the browser context through external means.
+// The app will gracefully fall back to mock data if the key is not available.
+const API_KEY = process.env.API_KEY;
 
 export const getKnowledgeAnswer = async (query: string, lang: Language): Promise<KnowledgeAnswer> => {
     if (!API_KEY) {
@@ -63,8 +62,8 @@ export const getKnowledgeAnswer = async (query: string, lang: Language): Promise
             related: resultJson.related_questions || [],
         };
 
-    } catch (error) {
-        console.error("Gemini API call for knowledge base failed:", error);
+    } catch (error: any) {
+        console.error("Gemini API call for knowledge base failed:", error.message);
         // Fallback to the old method if the new one fails, for resilience
         return getMockKnowledgeAnswer(query);
     }
@@ -95,9 +94,15 @@ export const getHistory = async (userId: string): Promise<QuestionHistory[]> => 
 };
 
 export const addHistory = async (userId: string, question: string): Promise<QuestionHistory | null> => {
-    const { data, error } = await supabase.from('question_history').insert({ user_id: userId, question }).select().single();
+    // Using RPC to call a SECURITY DEFINER function on the backend.
+    // This is the correct way to handle writes that should be permitted by RLS policies.
+    const { data, error } = await supabase.rpc('add_question_history', {
+        p_user_id: userId,
+        p_question: question,
+    });
+
     if (error) {
-        console.error("Error adding history:", error);
+        console.error("Error adding history:", error.message);
         throw error;
     }
     return data;
@@ -111,7 +116,7 @@ export const getBookmarks = async (userId: string): Promise<Bookmark[]> => {
 export const addBookmark = async (userId: string, question: string, answer: string): Promise<Bookmark | null> => {
     const { data, error } = await supabase.from('bookmarks').insert({ user_id: userId, question, answer }).select().single();
     if (error) {
-        console.error("Error adding bookmark:", error);
+        console.error("Error adding bookmark:", error.message);
         throw error;
     }
     return data;

@@ -1,10 +1,8 @@
-
-
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient.ts';
 import { Session, User } from '@supabase/supabase-js';
-import { translations, Language } from '../lib/translations.ts';
-import { Profile, Theme, FontSize } from '../types.ts';
+import { translations } from '../lib/translations.ts';
+import { Profile, Theme, FontSize, Language } from '../types.ts';
 import { getQueuedActions, processActionQueue } from '../services/offlineService.ts';
 
 interface AppContextType {
@@ -51,6 +49,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         return (localStorage.getItem('language') as Language) || 'en';
     });
 
+    const t = useCallback((key: keyof typeof translations['en']): string => {
+        return translations[language]?.[key] || translations['en'][key];
+    }, [language]);
+
     const refreshPendingCount = useCallback(async () => {
         const actions = await getQueuedActions();
         setPendingActionCount(actions.length);
@@ -63,7 +65,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             setIsOnline(true);
             const synced = await processActionQueue();
             if (synced) {
-                setSyncSuccessMessage(translations[language].sync_complete_refresh);
+                setSyncSuccessMessage(t('sync_complete_refresh'));
                 setRefreshKey(prev => prev + 1);
             }
             await refreshPendingCount();
@@ -77,68 +79,65 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [refreshPendingCount, language]);
+    }, [refreshPendingCount, t]);
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            const currentSessionProfile = profile;
             setSession(session);
             const currentUser = session?.user ?? null;
             setUser(currentUser);
-            setProfile(null); // Reset profile during auth changes
 
             if (currentUser) {
+                if (currentSessionProfile?.id === currentUser.id) {
+                    setAuthLoading(false);
+                    return;
+                }
+                
                 setProfileLoading(true);
                 try {
-                    // Attempt to fetch the user's profile
                     const { data: profileData, error: fetchError } = await supabase
                         .from('profiles')
                         .select('*')
                         .eq('id', currentUser.id)
-                        .maybeSingle(); // Use maybeSingle to get one record or null, without erroring on zero rows
+                        .maybeSingle();
 
                     if (fetchError) throw fetchError;
 
                     if (profileData) {
-                        // Profile exists, set it in state
                         setProfile(profileData);
-                    } else if (_event === 'SIGNED_IN') {
-                        // This is a new sign-in and the profile does NOT exist.
-                        // This self-heals the data by creating a profile for a user who might have been created before the trigger existed.
+                    } else if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') {
                         console.warn('No profile found for user on sign-in, creating one now.');
                         const { data: newProfile, error: insertError } = await supabase
                             .from('profiles')
                             .insert({
                                 id: currentUser.id,
                                 email: currentUser.email,
-                                name: currentUser.user_metadata.name || currentUser.email, // Use metadata name or fallback to email
+                                name: currentUser.user_metadata.name || currentUser.email,
                                 role: 'employee'
                             })
                             .select()
                             .single();
                         
                         if (insertError) throw insertError;
-                        
-                        // Set the newly created profile in state
                         setProfile(newProfile);
                     }
-                } catch (error) {
-                    console.error("Critical error in auth handler:", error);
-                    setProfile(null);
-                    setSession(null);
-                    setUser(null);
+                } catch (error: any) {
+                    console.error("Critical error in auth handler:", error.message);
                     await supabase.auth.signOut();
                 } finally {
                     setProfileLoading(false);
                 }
+            } else {
+                setProfile(null);
             }
-            // The initial auth check is complete, allow the app to render.
             setAuthLoading(false);
         });
 
         return () => {
             subscription.unsubscribe();
         };
-    }, [refreshKey]);
+    }, [refreshKey]); // Removed 'profile' dependency to prevent re-subscribing on profile changes.
     
     useEffect(() => {
         document.documentElement.classList.remove('light', 'dark');
@@ -151,15 +150,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }, [language]);
     
 
-    const toggleTheme = () => {
+    const toggleTheme = useCallback(() => {
         setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-    };
+    }, []);
 
-    const t = (key: keyof typeof translations['en']): string => {
-        return translations[language]?.[key] || translations['en'][key];
-    };
+    const refreshData = useCallback(() => setRefreshKey(k => k + 1), []);
     
-    const value = {
+    const value = useMemo(() => ({
         session,
         user,
         profile,
@@ -172,13 +169,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         t,
         isOnline,
         pendingActionCount,
-        refreshData: () => setRefreshKey(k => k + 1),
-        refreshPendingCount: refreshPendingCount,
+        refreshData,
+        refreshPendingCount,
         syncSuccessMessage,
         setSyncSuccessMessage,
         isSidebarOpen,
         setIsSidebarOpen,
-    };
+    }), [
+        session, user, profile, authLoading, profileLoading, theme, language, isOnline,
+        pendingActionCount, syncSuccessMessage, isSidebarOpen, t, toggleTheme, setLanguage,
+        refreshData, refreshPendingCount, setSyncSuccessMessage, setIsSidebarOpen
+    ]);
 
     return (
         <AppContext.Provider value={value}>
