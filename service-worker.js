@@ -1,19 +1,21 @@
 // --- Service Worker for Krishi Mitra ---
 
-const CACHE_NAME = 'krishi-mitra-static-v3';
-const DYNAMIC_CACHE_NAME = 'krishi-mitra-dynamic-v3';
+const CACHE_NAME = 'krishi-mitra-static-v24';
+const DYNAMIC_CACHE_NAME = 'krishi-mitra-dynamic-v24';
 
 // App Shell: All the essential files for the app to run.
+// CRITICAL FIX: Added '/index.tsx' to ensure the main app script is cached.
 const APP_SHELL_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
   '/logo.svg',
+  '/index.tsx', 
 ];
 
 
 self.addEventListener('install', event => {
-  console.log('[SW] Installing Service Worker...');
+  console.log('[SW] Installing Service Worker v24...');
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('[SW] Precaching App Shell...');
@@ -23,7 +25,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating Service Worker...');
+  console.log('[SW] Activating Service Worker v24...');
   event.waitUntil(
     caches.keys().then(keyList => {
       return Promise.all(keyList.map(key => {
