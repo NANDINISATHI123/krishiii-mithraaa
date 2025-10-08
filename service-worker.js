@@ -1,14 +1,14 @@
 // --- Service Worker for Krishi Mitra ---
 
-const CACHE_NAME = 'krishi-mitra-static-v2';
-const DYNAMIC_CACHE_NAME = 'krishi-mitra-dynamic-v2';
+const CACHE_NAME = 'krishi-mitra-static-v3';
+const DYNAMIC_CACHE_NAME = 'krishi-mitra-dynamic-v3';
 
 // App Shell: All the essential files for the app to run.
 const APP_SHELL_FILES = [
-  './',
-  './index.html',
-  './manifest.json',
-  './logo.svg',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/logo.svg',
 ];
 
 
