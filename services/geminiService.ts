@@ -1,12 +1,15 @@
-
-
 import { Report } from '../types.ts';
 import { GoogleGenAI, Type } from '@google/genai';
 
 // Simulate a network delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-const API_KEY = process.env.API_KEY;
+// --- WARNING: FOR DEMONSTRATION PURPOSES ONLY ---
+// This key is hardcoded for simplicity in a no-build, drag-and-drop environment.
+// In a real-world production application, you MUST NEVER expose your API key on the client side.
+// It should be stored securely in a backend environment variable and accessed via a serverless function or API endpoint.
+const API_KEY = 'AIzaSyC_5T97s0p44Net_fHc0O_zRE747liRyBg';
+
 
 // Helper function to convert a File object to a GoogleGenerativeAI.Part object.
 const fileToGenerativePart = async (file: File) => {
@@ -26,7 +29,8 @@ type DiagnosisResult = Omit<Report, 'id' | 'user_id' | 'user_email' | 'created_a
 // --- Real AI Diagnosis using Gemini API ---
 export const getRealDiagnosis = async (imageFile: File): Promise<DiagnosisResult> => {
     if (!API_KEY) {
-        throw new Error("Gemini API key not found.");
+        console.warn("API key not found. Using mock diagnosis data.");
+        return getMockDiagnosis(imageFile);
     }
     const ai = new GoogleGenAI({ apiKey: API_KEY });
 

@@ -1,5 +1,3 @@
-
-
 import { KnowledgeAnswer, QuestionHistory, Bookmark } from '../types.ts';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Language } from '../lib/translations.ts';
@@ -7,7 +5,11 @@ import { supabase } from '../lib/supabaseClient.ts';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-const API_KEY = process.env.API_KEY;
+// --- WARNING: FOR DEMONSTRATION PURPOSES ONLY ---
+// This key is hardcoded for simplicity in a no-build, drag-and-drop environment.
+// In a real-world production application, you MUST NEVER expose your API key on the client side.
+// It should be stored securely in a backend environment variable and accessed via a serverless function or API endpoint.
+const API_KEY = 'AIzaSyC_5T97s0p44Net_fHc0O_zRE747liRyBg';
 
 export const getKnowledgeAnswer = async (query: string, lang: Language): Promise<KnowledgeAnswer> => {
     if (!API_KEY) {
