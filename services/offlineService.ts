@@ -160,7 +160,8 @@ export const getCachedContent = async (key: string): Promise<any | null> => {
     return result ? result.data : null;
 };
 
-// --- Specific Knowledge Base Caching ---
+// --- Knowledge Base Caching ---
+
 export const cacheKnowledgeAnswer = async (answer: KnowledgeAnswer): Promise<void> => {
     const db = await openDB();
     const tx = db.transaction(KNOWLEDGE_CACHE_STORE, 'readwrite');
@@ -172,10 +173,9 @@ export const getCachedKnowledgeAnswer = async (question: string): Promise<Knowle
     const db = await openDB();
     const tx = db.transaction(KNOWLEDGE_CACHE_STORE, 'readonly');
     const store = tx.objectStore(KNOWLEDGE_CACHE_STORE);
-     const result = await new Promise<KnowledgeAnswer>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const request = store.get(question);
         request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => resolve(request.result || null);
     });
-    return result || null;
 };
